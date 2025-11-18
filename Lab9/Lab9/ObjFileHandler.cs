@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Globalization;
+using Lab9;
 
 namespace Lab9
 {
@@ -11,6 +12,7 @@ namespace Lab9
         public static Polyhedron LoadFromObj(string filePath)
         {
             var vertices = new List<Vector3>();
+            var vertexNormals = new List<Vector3>();
             var polygons = new List<Polygon>();
 
             try
@@ -35,7 +37,16 @@ namespace Lab9
                                 double.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out double y) &&
                                 double.TryParse(parts[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double z))
                             {
-                                vertices.Add(new Vector3(x, -y, z));
+                                vertices.Add(new Vector3(x, y, z));
+                            }
+                        }
+                        else if (parts[0] == "vn" && parts.Length >= 4)
+                        {
+                            if (double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double x) &&
+                                double.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out double y) &&
+                                double.TryParse(parts[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double z))
+                            {
+                                vertexNormals.Add(new Vector3(x, y, z).Normalize());
                             }
                         }
                         else if (parts[0] == "f" && parts.Length >= 4)
@@ -43,17 +54,13 @@ namespace Lab9
                             var indices = new List<int>();
                             for (int i = 1; i < parts.Length; i++)
                             {
-                                string indexPart = parts[i].Split('/')[0];
-
-                                if (int.TryParse(indexPart, out int oneBasedIndex))
+                                string part = parts[i];
+                                string indexPart = part.Split('/')[0];
+                                if (int.TryParse(indexPart, out int index))
                                 {
-                                    if (oneBasedIndex > 0)
-                                    {
-                                        indices.Add(oneBasedIndex - 1);
-                                    }
+                                    indices.Add(index - 1);
                                 }
                             }
-
                             if (indices.Count >= 3)
                             {
                                 polygons.Add(new Polygon(indices.ToArray()));
@@ -64,31 +71,26 @@ namespace Lab9
             }
             catch (Exception ex)
             {
-                throw new Exception("Ошибка при загрузке OBJ файла: " + ex.Message);
+                throw new Exception("Ошибка при чтении OBJ файла: " + ex.Message);
             }
 
-            if (vertices.Count == 0)
+            if (!vertices.Any() || !polygons.Any())
             {
-                throw new Exception("OBJ файл не содержит вершин.");
+                throw new Exception("Файл OBJ не содержит данных о вершинах или гранях.");
             }
 
             double minX = vertices.Min(v => v.X);
-            double maxX = vertices.Max(v => v.X);
             double minY = vertices.Min(v => v.Y);
-            double maxY = vertices.Max(v => v.Y);
             double minZ = vertices.Min(v => v.Z);
+            double maxX = vertices.Max(v => v.X);
+            double maxY = vertices.Max(v => v.Y);
             double maxZ = vertices.Max(v => v.Z);
 
             double centerX = (minX + maxX) / 2.0;
             double centerY = (minY + maxY) / 2.0;
             double centerZ = (minZ + maxZ) / 2.0;
 
-            double scaleX = maxX - minX;
-            double scaleY = maxY - minY;
-            double scaleZ = maxZ - minZ;
-
-            double maxDimension = Math.Max(scaleX, Math.Max(scaleY, scaleZ));
-
+            double maxDimension = Math.Max(maxX - minX, Math.Max(maxY - minY, maxZ - minZ));
             double targetSize = 2.0;
             double scaleFactor = targetSize / maxDimension;
 
@@ -106,7 +108,13 @@ namespace Lab9
                 normalizedVertices.Add(new Vector3(newX, newY, newZ));
             }
 
-            return new Polyhedron(normalizedVertices, polygons);
+            List<Vector3> normalsToPass = null;
+            if (vertexNormals.Count > 0 && vertexNormals.Count == normalizedVertices.Count)
+            {
+                normalsToPass = vertexNormals;
+            }
+
+            return new Polyhedron(normalizedVertices, polygons, normalsToPass);
         }
 
         public static void SaveToObj(Polyhedron polyhedron, string filePath)

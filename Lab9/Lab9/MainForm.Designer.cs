@@ -68,12 +68,12 @@
 
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
             this.openToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.openToolStripMenuItem.Text = "Open OBJ...";
+            this.openToolStripMenuItem.Text = "Open (.obj)";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
 
             this.saveToolStripMenuItem.Name = "saveToolStripMenuItem";
             this.saveToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.saveToolStripMenuItem.Text = "Save OBJ...";
+            this.saveToolStripMenuItem.Text = "Save (.obj)";
             this.saveToolStripMenuItem.Click += new System.EventHandler(this.saveToolStripMenuItem_Click);
 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
@@ -91,7 +91,7 @@
             this.perspectiveToolStripMenuItem,
             this.axonometricToolStripMenuItem});
             this.projectionToolStripMenuItem.Name = "projectionToolStripMenuItem";
-            this.projectionToolStripMenuItem.Size = new System.Drawing.Size(130, 22);
+            this.projectionToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
             this.projectionToolStripMenuItem.Text = "Projection";
 
             this.perspectiveToolStripMenuItem.Name = "perspectiveToolStripMenuItem";

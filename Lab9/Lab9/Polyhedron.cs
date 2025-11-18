@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Lab9;
+using System;
 using System.Collections.Generic;
 
 namespace Lab9
@@ -7,11 +8,71 @@ namespace Lab9
     {
         public List<Vector3> Vertices { get; }
         public List<Polygon> Polygons { get; }
+        public List<Vector3> FaceNormals { get; private set; }
+        public List<Vector3> VertexShadingNormals { get; private set; }
 
-        public Polyhedron(List<Vector3> vertices, List<Polygon> polygons)
+        public Polyhedron(List<Vector3> vertices, List<Polygon> polygons, List<Vector3> externalVertexNormals = null)
         {
             Vertices = vertices;
             Polygons = polygons;
+            CalculateFaceNormals();
+
+            if (externalVertexNormals != null && externalVertexNormals.Count == Vertices.Count)
+            {
+                VertexShadingNormals = externalVertexNormals;
+            }
+            else
+            {
+                CalculateAveragedVertexNormals();
+            }
+        }
+
+        private void CalculateFaceNormals()
+        {
+            FaceNormals = new List<Vector3>();
+            foreach (var polygon in Polygons)
+            {
+                if (polygon.Indices.Length < 3)
+                {
+                    FaceNormals.Add(new Vector3(0, 0, 0));
+                    continue;
+                }
+
+                Vector3 v1 = Vertices[polygon.Indices[0]];
+                Vector3 v2 = Vertices[polygon.Indices[1]];
+                Vector3 v3 = Vertices[polygon.Indices[2]];
+
+                Vector3 edge1 = v2 - v1;
+                Vector3 edge2 = v3 - v1;
+
+                Vector3 normal = edge1.Cross(edge2).Normalize();
+                FaceNormals.Add(normal);
+            }
+        }
+
+        private void CalculateAveragedVertexNormals()
+        {
+            VertexShadingNormals = new List<Vector3>();
+            for (int i = 0; i < Vertices.Count; i++)
+            {
+                VertexShadingNormals.Add(new Vector3(0, 0, 0));
+            }
+
+            for (int i = 0; i < Polygons.Count; i++)
+            {
+                var polygon = Polygons[i];
+                var faceNormal = FaceNormals[i];
+
+                foreach (int vertexIndex in polygon.Indices)
+                {
+                    VertexShadingNormals[vertexIndex] += faceNormal;
+                }
+            }
+
+            for (int i = 0; i < VertexShadingNormals.Count; i++)
+            {
+                VertexShadingNormals[i] = VertexShadingNormals[i].Normalize();
+            }
         }
 
         public static Polyhedron CreateTetrahedron()
@@ -51,12 +112,12 @@ namespace Lab9
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {0, 1, 2, 3}),
-                new Polygon(new[] {4, 7, 6, 5}),
-                new Polygon(new[] {0, 4, 5, 1}),
-                new Polygon(new[] {2, 6, 7, 3}),
-                new Polygon(new[] {0, 3, 7, 4}),
-                new Polygon(new[] {1, 5, 6, 2})
+                new Polygon(new[] {3, 2, 1, 0}),
+                new Polygon(new[] {4, 5, 6, 7}),
+                new Polygon(new[] {0, 1, 5, 4}),
+                new Polygon(new[] {2, 3, 7, 6}),
+                new Polygon(new[] {1, 2, 6, 5}),
+                new Polygon(new[] {0, 4, 7, 3})
             };
 
             return new Polyhedron(vertices, polygons);
@@ -66,24 +127,17 @@ namespace Lab9
         {
             var vertices = new List<Vector3>
             {
-                new Vector3(1, 0, 0),
-                new Vector3(-1, 0, 0),
-                new Vector3(0, 1, 0),
-                new Vector3(0, -1, 0),
-                new Vector3(0, 0, 1),
-                new Vector3(0, 0, -1)
+                new Vector3(1, 0, 0), new Vector3(-1, 0, 0),
+                new Vector3(0, 1, 0), new Vector3(0, -1, 0),
+                new Vector3(0, 0, 1), new Vector3(0, 0, -1)
             };
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {4, 0, 2}),
-                new Polygon(new[] {4, 2, 1}),
-                new Polygon(new[] {4, 1, 3}),
-                new Polygon(new[] {4, 3, 0}),
-                new Polygon(new[] {5, 2, 0}),
-                new Polygon(new[] {5, 0, 3}),
-                new Polygon(new[] {5, 3, 1}),
-                new Polygon(new[] {5, 1, 2})
+                new Polygon(new[] {0, 4, 2}), new Polygon(new[] {0, 2, 5}),
+                new Polygon(new[] {0, 5, 3}), new Polygon(new[] {0, 3, 4}),
+                new Polygon(new[] {1, 2, 4}), new Polygon(new[] {1, 5, 2}),
+                new Polygon(new[] {1, 3, 5}), new Polygon(new[] {1, 4, 3})
             };
 
             return new Polyhedron(vertices, polygons);
