@@ -62,4 +62,10 @@ namespace Lab9
             return new Vector3(X / length, Y / length, Z / length);
         }
     }
+    public struct Vector2UV
+    {
+        public double U;
+        public double V;
+        public Vector2UV(double u, double v) { U = u; V = v; }
+    }
 }
