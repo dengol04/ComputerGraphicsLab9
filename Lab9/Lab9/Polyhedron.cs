@@ -75,6 +75,26 @@ namespace Lab9
             }
         }
 
+        private static Vector2UV[] TriUV()
+        {
+            return new Vector2UV[]
+            {
+                new Vector2UV(0, 0),
+                new Vector2UV(1, 0),
+                new Vector2UV(0.5, 1)
+            };
+        }
+        private static Vector2UV[] QuadUV()
+        {
+            return new Vector2UV[]
+            {
+                new Vector2UV(0,0),
+                new Vector2UV(1,0),
+                new Vector2UV(1,1),
+                new Vector2UV(0,1)
+            };
+        }
+
         public static Polyhedron CreateTetrahedron()
         {
             var vertices = new List<Vector3>
@@ -87,10 +107,10 @@ namespace Lab9
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {0, 2, 1}),
-                new Polygon(new[] {0, 3, 2}),
-                new Polygon(new[] {0, 1, 3}),
-                new Polygon(new[] {1, 2, 3})
+                new Polygon(new[] {0, 2, 1}, TriUV()),
+                new Polygon(new[] {0, 3, 2}, TriUV()),
+                new Polygon(new[] {0, 1, 3}, TriUV()),
+                new Polygon(new[] {1, 2, 3}, TriUV())
             };
 
             return new Polyhedron(vertices, polygons);
@@ -112,12 +132,12 @@ namespace Lab9
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {3, 2, 1, 0}),
-                new Polygon(new[] {4, 5, 6, 7}),
-                new Polygon(new[] {0, 1, 5, 4}),
-                new Polygon(new[] {2, 3, 7, 6}),
-                new Polygon(new[] {1, 2, 6, 5}),
-                new Polygon(new[] {0, 4, 7, 3})
+                new Polygon(new[] {3, 2, 1, 0}, QuadUV()),
+                new Polygon(new[] {4, 5, 6, 7}, QuadUV()),
+                new Polygon(new[] {0, 1, 5, 4}, QuadUV()),
+                new Polygon(new[] {2, 3, 7, 6}, QuadUV()),
+                new Polygon(new[] {1, 2, 6, 5}, QuadUV()),
+                new Polygon(new[] {0, 4, 7, 3}, QuadUV())
             };
 
             return new Polyhedron(vertices, polygons);
@@ -134,10 +154,10 @@ namespace Lab9
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {0, 4, 2}), new Polygon(new[] {0, 2, 5}),
-                new Polygon(new[] {0, 5, 3}), new Polygon(new[] {0, 3, 4}),
-                new Polygon(new[] {1, 2, 4}), new Polygon(new[] {1, 5, 2}),
-                new Polygon(new[] {1, 3, 5}), new Polygon(new[] {1, 4, 3})
+                new Polygon(new[] {0, 4, 2}, TriUV()), new Polygon(new[] {0, 2, 5}, TriUV()),
+                new Polygon(new[] {0, 5, 3}, TriUV()), new Polygon(new[] {0, 3, 4}, TriUV()),
+                new Polygon(new[] {1, 2, 4}, TriUV()), new Polygon(new[] {1, 5, 2}, TriUV()),
+                new Polygon(new[] {1, 3, 5}, TriUV()), new Polygon(new[] {1, 4, 3}, TriUV())
             };
 
             return new Polyhedron(vertices, polygons);
@@ -156,10 +176,10 @@ namespace Lab9
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {0, 11, 5}), new Polygon(new[] {0, 5, 1}), new Polygon(new[] {0, 1, 7}), new Polygon(new[] {0, 7, 10}), new Polygon(new[] {0, 10, 11}),
-                new Polygon(new[] {1, 5, 9}), new Polygon(new[] {5, 11, 4}), new Polygon(new[] {11, 10, 2}), new Polygon(new[] {10, 7, 6}), new Polygon(new[] {7, 1, 8}),
-                new Polygon(new[] {3, 9, 4}), new Polygon(new[] {3, 4, 2}), new Polygon(new[] {3, 2, 6}), new Polygon(new[] {3, 6, 8}), new Polygon(new[] {3, 8, 9}),
-                new Polygon(new[] {4, 9, 5}), new Polygon(new[] {2, 4, 11}), new Polygon(new[] {6, 2, 10}), new Polygon(new[] {8, 6, 7}), new Polygon(new[] {9, 8, 1})
+                new Polygon(new[] {0, 11, 5}, TriUV()), new Polygon(new[] {0, 5, 1}, TriUV()), new Polygon(new[] {0, 1, 7}, TriUV()), new Polygon(new[] {0, 7, 10}, TriUV()), new Polygon(new[] {0, 10, 11}, TriUV()),
+                new Polygon(new[] {1, 5, 9}, TriUV()), new Polygon(new[] {5, 11, 4}, TriUV()), new Polygon(new[] {11, 10, 2}, TriUV()), new Polygon(new[] {10, 7, 6}, TriUV()), new Polygon(new[] {7, 1, 8}, TriUV()),
+                new Polygon(new[] {3, 9, 4}, TriUV()), new Polygon(new[] {3, 4, 2}, TriUV()), new Polygon(new[] {3, 2, 6}, TriUV()), new Polygon(new[] {3, 6, 8}, TriUV()), new Polygon(new[] {3, 8, 9}, TriUV()),
+                new Polygon(new[] {4, 9, 5}, TriUV()), new Polygon(new[] {2, 4, 11}, TriUV()), new Polygon(new[] {6, 2, 10}, TriUV()), new Polygon(new[] {8, 6, 7}, TriUV()), new Polygon(new[] {9, 8, 1}, TriUV())
             };
 
             return new Polyhedron(vertices, polygons);
@@ -183,23 +203,23 @@ namespace Lab9
 
             var polygons = new List<Polygon>
             {
-                new Polygon(new[] {0, 12, 1, 17, 16}),
-                new Polygon(new[] {0, 16, 2, 10, 8}),
-                new Polygon(new[] {0, 8, 4, 14, 12}),
+                new Polygon(new[] {0, 12, 1, 17, 16}, QuadUV()),
+                new Polygon(new[] {0, 16, 2, 10, 8}, QuadUV()),
+                new Polygon(new[] {0, 8, 4, 14, 12}, QuadUV()),
 
-                new Polygon(new[] {1, 9, 5, 14, 12}),
-                new Polygon(new[] {1, 17, 3, 11, 9}),
+                new Polygon(new[] {1, 9, 5, 14, 12}, QuadUV()),
+                new Polygon(new[] {1, 17, 3, 11, 9}, QuadUV()),
 
-                new Polygon(new[] {2, 13, 3, 17, 16}),
-                new Polygon(new[] {2, 10, 6, 15, 13}),
+                new Polygon(new[] {2, 13, 3, 17, 16}, QuadUV()),
+                new Polygon(new[] {2, 10, 6, 15, 13}, QuadUV()),
 
-                new Polygon(new[] {3, 11, 7, 15, 13}),
+                new Polygon(new[] {3, 11, 7, 15, 13}, QuadUV()),
 
-                new Polygon(new[] {4, 18, 6, 10, 8}),
-                new Polygon(new[] {4, 14, 5, 19, 18}),
+                new Polygon(new[] {4, 18, 6, 10, 8}, QuadUV()),
+                new Polygon(new[] {4, 14, 5, 19, 18}, QuadUV()),
 
-                new Polygon(new[] {5, 9, 11, 7, 19}),
-                new Polygon(new[] {6, 18, 19, 7, 15})
+                new Polygon(new[] {5, 9, 11, 7, 19}, QuadUV()),
+                new Polygon(new[] {6, 18, 19, 7, 15}, QuadUV())
             };
 
             return new Polyhedron(vertices, polygons);
