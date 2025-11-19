@@ -8,6 +8,13 @@ using System.Runtime.InteropServices;
 
 namespace Lab9
 {
+    public enum ShadingModel
+    {
+        Flat,
+        Gouraud,
+        PhongToon
+    }
+
     public partial class MainForm : Form
     {
         private Polyhedron currentPolyhedron;
@@ -40,6 +47,11 @@ namespace Lab9
 
         private bool useTexture = false;
 
+        private ShadingModel currentShadingModel = ShadingModel.Flat;
+        private ToolStripMenuItem flatShadingMenuItem;
+        private ToolStripMenuItem gouraudShadingMenuItem;
+        private ToolStripMenuItem phongToonShadingMenuItem;
+
         public MainForm()
         {
             InitializeComponent();
@@ -68,9 +80,28 @@ namespace Lab9
             };
             menuStrip1.Items.Add(toggleTextureToolStripMenuItem);
 
+            var shadingMenu = new ToolStripMenuItem("Shading");
+            flatShadingMenuItem = new ToolStripMenuItem("Flat Shading", null, (s, e) => SetShadingModel(ShadingModel.Flat));
+            gouraudShadingMenuItem = new ToolStripMenuItem("Gouraud Shading", null, (s, e) => SetShadingModel(ShadingModel.Gouraud));
+            phongToonShadingMenuItem = new ToolStripMenuItem("Phong Toon Shading", null, (s, e) => SetShadingModel(ShadingModel.PhongToon));
+
+            shadingMenu.DropDownItems.AddRange(new ToolStripItem[] { flatShadingMenuItem, gouraudShadingMenuItem, phongToonShadingMenuItem });
+            viewToolStripMenuItem.DropDownItems.Add(shadingMenu);
+            SetShadingModel(ShadingModel.Flat); 
+
             texture = CreateCheckerboardTexture(256, 256, 16);
             CacheTexture(texture);
         }
+
+        private void SetShadingModel(ShadingModel model)
+        {
+            currentShadingModel = model;
+            flatShadingMenuItem.Checked = model == ShadingModel.Flat;
+            gouraudShadingMenuItem.Checked = model == ShadingModel.Gouraud;
+            phongToonShadingMenuItem.Checked = model == ShadingModel.PhongToon;
+            this.Invalidate();
+        }
+
         private void toggleTextureToolStripMenuItem_Click(object sender, EventArgs e)
         {
             useTexture = !useTexture;
@@ -126,28 +157,63 @@ namespace Lab9
             return new PointF(x, y);
         }
 
-        private Color CalculatePhongColor(Vector3 vertex, Vector3 normal, Vector3 viewPos)
+        private Color CalculateFlatPhongColor(Vector3 vertex, Vector3 normal, Vector3 viewPos)
         {
             Vector3 objectColor = new Vector3(0.0, 0.5, 0.8);
-
             Vector3 lightDir = (lightPosition - vertex).Normalize();
-
+            
             double diff = Math.Max(normal.Dot(lightDir), 0.0);
             Vector3 diffuse = objectColor * diffuseColor * diff;
-
+           
             Vector3 viewDir = (viewPos - vertex).Normalize();
             Vector3 reflectDir = (2 * normal.Dot(lightDir) * normal - lightDir).Normalize();
-
             double spec = 0.0;
             if (diff > 0.0)
             {
                 spec = Math.Pow(Math.Max(viewDir.Dot(reflectDir), 0.0), shininess);
             }
             Vector3 specular = specularColor * spec;
+            Vector3 ambient = objectColor * ambientColor;
+            
+            Vector3 finalColor = ambient + diffuse + specular;
+            int r = (int)(Math.Min(1.0, finalColor.X) * 255);
+            int g = (int)(Math.Min(1.0, finalColor.Y) * 255);
+            int b = (int)(Math.Min(1.0, finalColor.Z) * 255);
+            return Color.FromArgb(r, g, b);
+        }
 
+        private Color CalculateLambertColor(Vector3 vertex, Vector3 normal)
+        {
+            Vector3 objectColor = new Vector3(0.0, 0.5, 0.8);
+            Vector3 lightDir = (lightPosition - vertex).Normalize();
+
+            double diff = Math.Max(normal.Dot(lightDir), 0.0);
+            Vector3 diffuse = objectColor * diffuseColor * diff;
+            Vector3 dark = objectColor * ambientColor;
+
+            Vector3 finalColor = dark + diffuse;
+
+            int r = (int)(Math.Min(1.0, finalColor.X) * 255);
+            int g = (int)(Math.Min(1.0, finalColor.Y) * 255);
+            int b = (int)(Math.Min(1.0, finalColor.Z) * 255);
+
+            return Color.FromArgb(r, g, b);
+        }
+
+        private Color CalculateToonColor(Vector3 fragPos, Vector3 normal, Vector3 viewPos)
+        {
+            Vector3 objectColor = new Vector3(0.0, 0.5, 0.8);
+            Vector3 lightDir = (lightPosition - fragPos).Normalize();
+
+            double intensity = Math.Max(0.0, normal.Dot(lightDir));
+
+            int levels = 4;
+            intensity = Math.Floor(intensity * levels) / (levels - 1);
+
+            Vector3 diffuse = objectColor * diffuseColor * intensity;
             Vector3 ambient = objectColor * ambientColor;
 
-            Vector3 finalColor = ambient + diffuse + specular;
+            Vector3 finalColor = ambient + diffuse;
 
             int r = (int)(Math.Min(1.0, finalColor.X) * 255);
             int g = (int)(Math.Min(1.0, finalColor.Y) * 255);
@@ -180,13 +246,7 @@ namespace Lab9
             if (frameBuffer == null || frameBuffer.Length != bufferSize)
                 frameBuffer = new byte[bufferSize];
 
-            for (int i = 0; i < bufferSize; i += 4)
-            {
-                frameBuffer[i + 0] = 0;
-                frameBuffer[i + 1] = 0;
-                frameBuffer[i + 2] = 0;
-                frameBuffer[i + 3] = 255;
-            }
+            Array.Clear(frameBuffer, 0, bufferSize);
 
             double[,] zBuffer = new double[width, height];
             for (int x = 0; x < width; x++)
@@ -194,6 +254,9 @@ namespace Lab9
                     zBuffer[x, y] = double.NegativeInfinity;
 
             Vector3[] transformedVertices = new Vector3[currentPolyhedron.Vertices.Count];
+            Vector3[] transformedNormals = new Vector3[currentPolyhedron.VertexShadingNormals.Count];
+            Color[] vertexColors = new Color[currentPolyhedron.Vertices.Count];
+
             for (int i = 0; i < currentPolyhedron.Vertices.Count; i++)
             {
                 Vector3 v = currentPolyhedron.Vertices[i];
@@ -202,6 +265,16 @@ namespace Lab9
                 v = RotateY(v, totalRotationY);
                 v = Translate(v, translation);
                 transformedVertices[i] = v;
+
+                Vector3 n = currentPolyhedron.VertexShadingNormals[i];
+                n = RotateX(n, totalRotationX);
+                n = RotateY(n, totalRotationY);
+                transformedNormals[i] = n.Normalize();
+
+                if (currentShadingModel == ShadingModel.Gouraud)
+                {
+                    vertexColors[i] = CalculateLambertColor(transformedVertices[i], transformedNormals[i]);
+                }
             }
 
             var sortedPolygons = currentPolyhedron.Polygons
@@ -219,31 +292,14 @@ namespace Lab9
             foreach (var item in sortedPolygons)
             {
                 var polygon = item.Polygon;
-                int normalIndex = item.Index;
 
-                Vector3 faceNormal = currentPolyhedron.FaceNormals[normalIndex];
-                faceNormal = RotateX(faceNormal, totalRotationX);
-                faceNormal = RotateY(faceNormal, totalRotationY);
+                Vector3 v0 = transformedVertices[polygon.Indices[0]];
+                Vector3 v1 = transformedVertices[polygon.Indices[1]];
+                Vector3 v2 = transformedVertices[polygon.Indices[2]];
+                Vector3 faceNormal = (v1 - v0).Cross(v2 - v1).Normalize();
+                Vector3 viewDir = (projectionType == "Perspective") ? (v0 - cameraPosition).Normalize() : viewVector;
 
-                bool isFrontFacing = false;
-                if (projectionType == "Perspective")
-                {
-                    Vector3 faceVertex = transformedVertices[polygon.Indices[0]];
-                    Vector3 viewRay = cameraPosition - faceVertex;
-                    isFrontFacing = faceNormal.Dot(viewRay) > 0;
-                }
-                else
-                {
-                    isFrontFacing = faceNormal.Dot(viewVector) > 0;
-                }
-                if (!isFrontFacing) continue;
-
-                Vector3 centerVertex = new Vector3(0, 0, 0);
-                foreach (int idx in polygon.Indices)
-                    centerVertex += transformedVertices[idx];
-                centerVertex *= (1.0 / polygon.Indices.Length);
-
-                Color fillColor = CalculatePhongColor(centerVertex, faceNormal, cameraPosition);
+                if (faceNormal.Dot(viewDir) >= 0) continue;
 
                 int n = polygon.Indices.Length;
                 PointF[] pts2D = new PointF[n];
@@ -271,40 +327,74 @@ namespace Lab9
 
                 for (int t = 1; t < n - 1; t++)
                 {
-                    PointF A = pts2D[0], B = pts2D[t], C = pts2D[t + 1];
-                    double zA = zs[0], zB = zs[t], zC = zs[t + 1];
-                    Vector2UV uvA = uvs[0], uvB = uvs[t], uvC = uvs[t + 1];
+                    PointF pA = pts2D[0], pB = pts2D[t], pC = pts2D[t + 1];
+                    Vector3 vA = transformedVertices[polygon.Indices[0]];
+                    Vector3 vB = transformedVertices[polygon.Indices[t]];
+                    Vector3 vC = transformedVertices[polygon.Indices[t + 1]];
 
-                    int minX = (int)Math.Max(0, Math.Floor(Math.Min(A.X, Math.Min(B.X, C.X))));
-                    int maxX = (int)Math.Min(width - 1, Math.Ceiling(Math.Max(A.X, Math.Max(B.X, C.X))));
-                    int minY = (int)Math.Max(0, Math.Floor(Math.Min(A.Y, Math.Min(B.Y, C.Y))));
-                    int maxY = (int)Math.Min(height - 1, Math.Ceiling(Math.Max(A.Y, Math.Max(B.Y, C.Y))));
+                    int minX = (int)Math.Max(0, Math.Floor(Math.Min(pA.X, Math.Min(pB.X, pC.X))));
+                    int maxX = (int)Math.Min(width - 1, Math.Ceiling(Math.Max(pA.X, Math.Max(pB.X, pC.X))));
+                    int minY = (int)Math.Max(0, Math.Floor(Math.Min(pA.Y, Math.Min(pB.Y, pC.Y))));
+                    int maxY = (int)Math.Min(height - 1, Math.Ceiling(Math.Max(pA.Y, Math.Max(pB.Y, pC.Y))));
 
                     for (int py = minY; py <= maxY; py++)
                     {
                         for (int px = minX; px <= maxX; px++)
                         {
                             PointF P = new PointF(px + 0.5f, py + 0.5f);
-                            Barycentric(P, A, B, C, out double w1, out double w2, out double w3);
+                            Barycentric(P, pA, pB, pC, out double w1, out double w2, out double w3);
                             if (w1 < -1e-6 || w2 < -1e-6 || w3 < -1e-6) continue;
 
-                            double z = w1 * zA + w2 * zB + w3 * zC;
+                            double z = w1 * vA.Z + w2 * vB.Z + w3 * vC.Z;
                             if (z <= zBuffer[px, py]) continue;
 
-                            double u = w1 * uvA.U + w2 * uvB.U + w3 * uvC.U;
-                            double v = w1 * uvA.V + w2 * uvB.V + w3 * uvC.V;
+                            Color pixelColor;
 
-                            Color texColor = Color.White;
-                            if (useTexture && texture != null)
+                            switch (currentShadingModel)
                             {
-                                texColor = SampleTexture(texture, u, v);
+                                case ShadingModel.Gouraud:
+                                    Color cA = vertexColors[polygon.Indices[0]];
+                                    Color cB = vertexColors[polygon.Indices[t]];
+                                    Color cC = vertexColors[polygon.Indices[t + 1]];
+
+                                    int r = (int)(w1 * cA.R + w2 * cB.R + w3 * cC.R);
+                                    int gr = (int)(w1 * cA.G + w2 * cB.G + w3 * cC.G);
+                                    int b = (int)(w1 * cA.B + w2 * cB.B + w3 * cC.B);
+                                    pixelColor = Color.FromArgb(Clamp(r), Clamp(gr), Clamp(b));
+                                    break;
+
+                                case ShadingModel.PhongToon: 
+                                    Vector3 nA = transformedNormals[polygon.Indices[0]];
+                                    Vector3 nB = transformedNormals[polygon.Indices[t]];
+                                    Vector3 nC = transformedNormals[polygon.Indices[t + 1]];
+
+                                    Vector3 interpolatedNormal = (w1 * nA + w2 * nB + w3 * nC).Normalize();
+
+                                    Vector3 fragPos = w1 * vA + w2 * vB + w3 * vC;
+
+                                    pixelColor = CalculateToonColor(fragPos, interpolatedNormal, cameraPosition);
+                                    break;
+
+                                case ShadingModel.Flat:
+                                default:
+                                    pixelColor = CalculateFlatPhongColor(vA, faceNormal, cameraPosition);
+                                    break;
                             }
 
-                            int rr = texColor.R * fillColor.R / 255;
-                            int gg = texColor.G * fillColor.G / 255;
-                            int bb = texColor.B * fillColor.B / 255;
+                            if (useTexture && texture != null)
+                            {
+                                Vector2UV uvA = uvs[0], uvB = uvs[t], uvC = uvs[t + 1];
+                                double u = w1 * uvA.U + w2 * uvB.U + w3 * uvC.U;
+                                double v = w1 * uvA.V + w2 * uvB.V + w3 * uvC.V;
+                                Color texColor = SampleTexture(texture, u, v);
 
-                            FastSetPixel(frameBuffer, stride, px, py, Color.FromArgb(Clamp(rr), Clamp(gg), Clamp(bb)));
+                                int rr = texColor.R * pixelColor.R / 255;
+                                int gg = texColor.G * pixelColor.G / 255;
+                                int bb = texColor.B * pixelColor.B / 255;
+                                pixelColor = Color.FromArgb(Clamp(rr), Clamp(gg), Clamp(bb));
+                            }
+
+                            FastSetPixel(frameBuffer, stride, px, py, pixelColor);
                             zBuffer[px, py] = z;
                         }
                     }
@@ -379,7 +469,7 @@ namespace Lab9
         {
             if (x < 0 || x >= (strideLocal / bytesPerPixel) || y < 0) return;
             int index = y * strideLocal + x * bytesPerPixel;
-            if (index + 2 >= buffer.Length || index < 0) return;
+            if (index + 3 >= buffer.Length || index < 0) return;
             buffer[index + 0] = c.B;
             buffer[index + 1] = c.G;
             buffer[index + 2] = c.R;
