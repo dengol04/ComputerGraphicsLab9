@@ -112,8 +112,8 @@ namespace Lab9
 
         private void RotationTimer_Tick(object sender, EventArgs e)
         {
-            totalRotationX += ROTATION_ANGLE_STEP;
-            totalRotationY += ROTATION_ANGLE_STEP;
+            //totalRotationX += ROTATION_ANGLE_STEP;
+            //totalRotationY += ROTATION_ANGLE_STEP;
             this.Invalidate();
         }
 
